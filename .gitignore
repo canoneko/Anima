@@ -1,0 +1,19 @@
+# 操作系统
+.DS_Store
+._*
+Thumbs.db
+desktop.ini
+
+# 编辑器 / IDE
+.vscode/
+.idea/
+.nezha/
+*.swp
+*.swo
+*~
+
+# 其他
+*.log
+node_modules/
+.env
+.env.*
