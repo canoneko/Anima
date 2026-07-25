@@ -1,0 +1,2232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Anima</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css?family=Sora:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   1. :root -- Apple x Mood Spectrum Design Tokens
+   ============================================================ */
+:root {
+  --bg: #000000;
+  --card-bg: rgba(28, 28, 30, 0.8);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.55);
+  --text-tertiary: rgba(255, 255, 255, 0.30);
+  --mood: #00C7BE;
+  --mood-glow: rgba(0, 199, 190, 0.30);
+  --mood-soft: rgba(0, 199, 190, 0.12);
+  --mood-deep: rgba(0, 199, 190, 0.06);
+  --success: #30D158;
+  --success-bg: rgba(48, 209, 88, 0.12);
+  --warning: #FF9F0A;
+  --warning-bg: rgba(255, 159, 10, 0.12);
+  --card-shadow: 0 2px 20px rgba(0, 0, 0, 0.12);
+  --ease: cubic-bezier(0.42, 0, 0.58, 1);
+  --ease-out: cubic-bezier(0, 0, 0.58, 1);
+  --fast: 200ms;
+  --normal: 350ms;
+  --mood-transition: 0.8s;
+  --tab-bar-h: 52px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+/* ============================================================
+   2. RESET
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;}
+body{
+  font-family:'Sora','Noto Sans SC',-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','PingFang SC','Helvetica Neue',sans-serif;
+  font-size:15px;font-weight:500;
+  line-height:1.47;color:var(--text-primary);
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  overflow-x:hidden;word-break:keep-all;overflow-wrap:break-word;
+  background:#000;
+}
+button{font-family:inherit;}
+
+/* ============================================================
+   3. APP SHELL
+   ============================================================ */
+.app-shell{
+  width:100%;max-width:430px;margin:0 auto;
+  min-height:100vh;position:relative;
+  background:transparent;overflow:hidden;
+  padding-top:var(--safe-top);
+}
+@media(min-width:431px){
+  body{background:#000;}
+  .app-shell{
+    margin-top:16px;margin-bottom:16px;border-radius:24px;
+    box-shadow:0 0 80px rgba(0,0,0,0.8),0 0 0 0.5px rgba(255,255,255,0.06);
+    min-height:calc(100vh - 32px);
+    border:0.5px solid rgba(255,255,255,0.06);
+    background:rgba(0,0,0,0.85);
+    backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);
+  }
+}
+
+/* ============================================================
+   4. AMBIENT BG -- Single mood glow from top-center fading to black
+   ============================================================ */
+.ambient-bg{
+  position:fixed;inset:0;z-index:0;opacity:0;
+  transition:opacity var(--mood-transition) var(--ease);
+  pointer-events:none;
+}
+.ambient-bg::before{
+  content:'';position:absolute;
+  top:-20%;left:50%;transform:translateX(-50%);
+  width:140%;height:70%;
+  border-radius:50%;
+  filter:blur(100px);
+  pointer-events:none;
+  transition:background var(--mood-transition) var(--ease);
+}
+.ambient-bg::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(to bottom, transparent 30%, #000 85%);
+  pointer-events:none;
+}
+.ambient-bg.focusing::before{background:rgba(0,199,190,0.18);}
+.ambient-bg.recharging::before{background:rgba(255,100,130,0.18);}
+.ambient-bg.collaborating::before{background:rgba(255,159,10,0.18);}
+/* Remove old fluid-drift and orb animations — no longer used */
+
+/* ============================================================
+   4b. ORB -- floating ambient orbs with drift animation
+   ============================================================ */
+.orb{
+  position:fixed;border-radius:50%;pointer-events:none;z-index:0;
+  filter:blur(80px);opacity:0.35;will-change:transform,background;
+  transition:background var(--mood-transition) var(--ease);
+}
+.orb-1{width:260px;height:260px;top:-60px;left:-40px;background:var(--mood);animation:orb-drift-1 12s ease-in-out infinite;}
+.orb-2{width:180px;height:180px;bottom:30%;right:-30px;background:var(--mood);opacity:0.2;animation:orb-drift-2 16s ease-in-out infinite;}
+.orb-3{width:120px;height:120px;top:40%;left:30%;background:var(--mood);opacity:0.15;animation:orb-drift-3 20s ease-in-out infinite;}
+
+@keyframes orb-drift-1{
+  0%,100%{transform:translate(0,0) scale(1);}
+  33%{transform:translate(30px,40px) scale(1.1);}
+  66%{transform:translate(-20px,20px) scale(0.95);}
+}
+@keyframes orb-drift-2{
+  0%,100%{transform:translate(0,0) scale(1);}
+  33%{transform:translate(-25px,-30px) scale(1.05);}
+  66%{transform:translate(15px,-15px) scale(0.9);}
+}
+@keyframes orb-drift-3{
+  0%,100%{transform:translate(0,0) scale(1);}
+  50%{transform:translate(20px,-25px) scale(1.15);}
+}
+
+/* ============================================================
+   5. PAGE CONTENT
+   ============================================================ */
+.page-content{
+  position:relative;z-index:1;
+  padding-bottom:calc(var(--tab-bar-h) + 24px + var(--safe-bottom));
+  min-height:100vh;
+}
+.page-content::-webkit-scrollbar{width:0;}
+
+/* ============================================================
+   6. TAB VIEW SYSTEM
+   ============================================================ */
+.tab-view{
+  display:none;opacity:0;transform:translateY(10px);
+  transition:opacity var(--normal) var(--ease),transform var(--normal) var(--ease);
+}
+.tab-view.active{display:block;}
+.tab-view.visible{opacity:1;transform:translateY(0);}
+
+/* ============================================================
+   7. TAB BAR -- Apple rounded rectangle
+   ============================================================ */
+.tab-bar{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+  width:calc(100% - 48px);max-width:420px;height:var(--tab-bar-h);
+  background:rgba(28,28,30,0.82);
+  backdrop-filter:blur(50px) saturate(200%);-webkit-backdrop-filter:blur(50px) saturate(200%);
+  border-radius:calc(var(--tab-bar-h) / 2);
+  box-shadow:0 4px 32px rgba(0,0,0,0.4),0 0 0 0.5px rgba(255,255,255,0.06);
+  display:flex;align-items:center;justify-content:space-around;
+  z-index:9999;
+  border:none;
+}
+.tab-btn{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;padding:6px 20px;border:none;background:none;cursor:pointer;
+  color:var(--text-tertiary);font-size:14px;font-weight:500;
+  letter-spacing:0.02em;
+  transition:color var(--fast) var(--ease);
+  -webkit-tap-highlight-color:transparent;flex:1;min-height:44px;position:relative;
+}
+.tab-btn:active{opacity:0.6;}
+.tab-btn.active{color:var(--mood);transition:color var(--mood-transition) var(--ease);}
+.tab-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center;}
+.tab-icon svg{width:20px;height:20px;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round;transition:stroke var(--fast) var(--ease);}
+.tab-btn.active .tab-icon svg{stroke-width:1.8;stroke:var(--mood);transition:stroke var(--mood-transition) var(--ease);}
+.tab-activity{
+  position:absolute;top:2px;right:4px;min-width:16px;height:16px;
+  border-radius:8px;background:var(--mood-soft);color:var(--mood);
+  font-size:9px;font-weight:600;display:flex;align-items:center;
+  justify-content:center;padding:0 4px;line-height:1;
+  transition:all var(--mood-transition) var(--ease);
+}
+
+/* ============================================================
+   8. SECTION LABELS -- Apple section label style
+   ============================================================ */
+.section-label{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:14px;font-weight:600;
+  letter-spacing:0.06em;text-transform:uppercase;
+  color:var(--text-secondary);margin-bottom:20px;
+}
+.section-label .dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--mood);flex-shrink:0;
+  transition:background var(--mood-transition) var(--ease);
+}
+.section-title{
+  font-size:34px;font-weight:700;
+  line-height:1.15;color:var(--text-primary);letter-spacing:-0.02em;
+}
+.section-subtitle{
+  font-size:15px;font-weight:500;
+  color:var(--text-secondary);margin-top:4px;
+}
+
+/* ============================================================
+   9. PROFILE HERO
+   ============================================================ */
+.profile-hero{
+  padding:calc(48px + env(safe-area-inset-top,0px)) 24px 24px;
+  position:relative;overflow:hidden;
+}
+.profile-hero .section-title{
+  font-size:34px;font-weight:700;margin-bottom:0;
+}
+.hero-name-row{display:flex;align-items:center;gap:12px;margin-bottom:4px;}
+.profile-role{
+  font-size:13px;font-weight:500;color:var(--text-secondary);
+  letter-spacing:0.01em;display:flex;align-items:center;gap:4px;
+  flex-wrap:wrap;margin-top:8px;
+}
+.tenure-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;
+  color:var(--mood);background:var(--mood-deep);
+  margin-left:4px;
+  transition:all var(--mood-transition) var(--ease);
+}
+.tenure-badge svg{width:11px;height:11px;stroke:var(--mood);stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+
+/* Hero gradient overlay */
+.hero-gradient{
+  position:absolute;inset:0;pointer-events:none;
+  opacity:0.20;
+  transition:opacity var(--mood-transition) var(--ease);
+  z-index:0;
+}
+.profile-hero > *:not(.hero-gradient){position:relative;z-index:1;}
+
+/* Name edit */
+.name-edit-btn{display:none;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;border:0.5px solid rgba(255,255,255,0.12);background:transparent;cursor:pointer;color:var(--text-tertiary);transition:all var(--fast) var(--ease);-webkit-tap-highlight-color:transparent;flex-shrink:0;margin-top:4px;}
+.name-edit-btn svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.name-edit-btn:hover{color:var(--text-primary);}
+.name-edit-btn:active{transform:scale(0.88);}
+.name-edit-btn.active{background:var(--mood);border-color:var(--mood);color:#fff;}
+.name-edit-btn.active svg{transform:rotate(180deg);}
+@keyframes name-edit-enter{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+@keyframes name-refresh{0%{transform:scale(1);}40%{transform:scale(1.04);}100%{transform:scale(1);}}
+.name-edit-input{animation:name-edit-enter 500ms var(--ease-out) forwards;}
+.hero-name-refresh{animation:name-refresh 350ms ease-out forwards;display:inline-block;}
+
+/* ============================================================
+   10. STATUS PILLS -- Apple pill style
+   ============================================================ */
+.status-pills-row{display:flex;gap:10px;margin-top:28px;}
+.status-pill-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 16px;border-radius:20px;
+  font-size:13px;font-weight:500;
+  border:none;background:rgba(255,255,255,0.06);
+  color:var(--text-secondary);cursor:pointer;
+  transition:all var(--fast) var(--ease);
+  -webkit-tap-highlight-color:transparent;
+  min-height:36px;
+}
+.status-pill-btn:hover{background:rgba(255,255,255,0.10);}
+.status-pill-btn:active{transform:scale(0.96);}
+.status-pill-btn .status-dot{
+  width:6px;height:6px;border-radius:50%;flex-shrink:0;
+}
+.status-pill-btn.focusing .status-dot{background:#00C7BE;}
+.status-pill-btn.recharging .status-dot{background:#FF6482;}
+.status-pill-btn.collaborating .status-dot{background:#FF9F0A;}
+
+.status-pill-btn.active.focusing{
+  background:#00C7BE;border-color:transparent;color:#fff;font-weight:600;
+  box-shadow:0 0 20px rgba(0,199,190,0.3);
+}
+.status-pill-btn.active.recharging{
+  background:#FF6482;border-color:transparent;color:#fff;font-weight:600;
+  box-shadow:0 0 20px rgba(255,100,130,0.3);
+}
+.status-pill-btn.active.collaborating{
+  background:#FF9F0A;border-color:transparent;color:#fff;font-weight:600;
+  box-shadow:0 0 20px rgba(255,159,10,0.3);
+}
+.status-pill-btn.active .status-dot{background:#fff !important;}
+
+/* ============================================================
+   11. CARD -- Apple card style
+   ============================================================ */
+.card{
+  background:var(--card-bg);
+  backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);
+  border-radius:20px;
+  box-shadow:var(--card-shadow);
+  border:0.5px solid var(--card-border);
+  margin:0 20px;padding:24px;margin-bottom:20px;
+  opacity:0;transform:translateY(10px);
+  animation:card-enter 500ms var(--ease-out) forwards;
+  will-change:transform,opacity;
+  transition:border-color var(--mood-transition) var(--ease),
+             box-shadow var(--mood-transition) var(--ease);
+}
+@keyframes card-enter{to{opacity:1;transform:translateY(0);}}
+
+/* ============================================================
+   12. RING PROGRESS -- SVG circle, r=42
+   ============================================================ */
+.ring-group{display:flex;flex-direction:column;align-items:center;}
+.ring-progress{position:relative;width:120px;height:120px;}
+.ring-progress svg{width:100%;height:100%;overflow:visible;}
+.ring-track{fill:none;stroke:rgba(255,255,255,0.06);stroke-width:5;}
+.ring-fill{
+  fill:none;stroke:var(--mood);stroke-width:5;
+  stroke-linecap:round;
+  transition:stroke var(--mood-transition) var(--ease),
+             stroke-dashoffset 0.8s var(--ease);
+  filter:drop-shadow(0 0 8px var(--mood-glow));
+}
+.ring-center{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;pointer-events:none;
+}
+.ring-value{
+  font-size:32px;font-weight:700;
+  color:var(--text-primary);line-height:1;letter-spacing:-0.02em;
+  text-align:center;
+}
+.ring-label-text{font-size:11px;color:var(--text-tertiary);margin-top:2px;font-weight:500;}
+.ring-state{
+  font-size:13px;color:var(--text-secondary);text-align:center;
+  min-height:20px;line-height:1.4;margin-top:8px;
+}
+.stats-rings-row{display:flex;justify-content:center;gap:40px;}
+
+/* Hidden bars for JS compat */
+.js-compat-bar{position:absolute;opacity:0;pointer-events:none;width:0;height:0;overflow:hidden;}
+
+/* ============================================================
+   13. HEATMAP
+   ============================================================ */
+.heatmap-cell{
+  width:100%;height:0;padding-bottom:100%;border-radius:3px;
+  background:rgba(255,255,255,0.04);
+  transition:transform 120ms var(--ease),background var(--mood-transition) var(--ease);
+  cursor:default;position:relative;
+}
+.heatmap-cell.l0{background:rgba(255,255,255,0.04);}
+.heatmap-cell.l1{background:var(--mood-deep);}
+.heatmap-cell.l2{background:var(--mood-soft);}
+.heatmap-cell.l3{background:var(--mood-glow);}
+.heatmap-cell.l4{background:var(--mood);filter:brightness(1.1);}
+.heatmap-cell:hover{transform:scale(1.5);z-index:1;position:relative;}
+
+/* Rhythm section */
+.rhythm-section{margin-top:28px;}
+.rhythm-header{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
+.rhythm-label{font-size:15px;font-weight:600;color:var(--text-secondary);display:inline-flex;align-items:center;gap:5px;letter-spacing:-0.01em;}
+.rhythm-label svg{width:16px;height:16px;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.rhythm-state{font-size:14px;font-weight:600;color:var(--mood);margin-left:auto;transition:color var(--mood-transition) var(--ease);}
+
+/* ============================================================
+   14. ROLE TAGS & TOOLS -- Apple pill
+   ============================================================ */
+.compact-label{font-size:15px;font-weight:600;color:var(--text-secondary);margin-bottom:12px;letter-spacing:-0.01em;}
+.role-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;}
+.role-tag{
+  display:inline-flex;align-items:center;padding:6px 14px;
+  border-radius:20px;font-size:12px;font-weight:500;
+  color:var(--text-secondary);
+  background:var(--mood-deep);
+  transition:all var(--mood-transition) var(--ease);
+}
+.inline-edit-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:30px;height:30px;border-radius:50%;border:none;
+  background:transparent;cursor:pointer;color:var(--text-tertiary);
+  transition:all var(--fast) var(--ease);
+  -webkit-tap-highlight-color:transparent;flex-shrink:0;
+}
+.inline-edit-btn:hover{color:var(--mood);background:var(--mood-deep);}
+.inline-edit-btn:active{transform:scale(0.9);}
+.inline-edit-btn svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.compact-tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.compact-tools .tool-item{
+  font-size:12px;font-weight:500;color:var(--text-secondary);
+  padding:5px 12px;border-radius:20px;
+  background:var(--mood-deep);
+  letter-spacing:0.01em;
+  transition:all var(--mood-transition) var(--ease);
+}
+.compact-skills{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:16px;}
+.compact-skill{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary);}
+.compact-skill .skill-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.compact-skill .skill-dot.common{background:var(--mood);transition:background var(--mood-transition) var(--ease);}
+.compact-skill .skill-dot.familiar{background:var(--text-tertiary);}
+.compact-skill .skill-dot.exploring{background:rgba(255,255,255,0.10);}
+.collab-mini-inline{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--mood);background:none;padding:0;border-radius:0;cursor:pointer;transition:all var(--fast) var(--ease);}
+.collab-mini-inline:hover{color:var(--text-primary);}
+.collab-mini-inline:active{opacity:0.6;}
+.collab-mini-inline svg{width:12px;height:12px;stroke:var(--mood);stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+
+/* ============================================================
+   15. CHART -- Growth curve
+   ============================================================ */
+.chart-wrap{position:relative;width:100%;height:140px;margin-top:8px;}
+.chart-svg{width:100%;height:100%;overflow:visible;}
+.chart-line{fill:none;stroke:var(--mood);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;transition:stroke var(--mood-transition) var(--ease);}
+.chart-area{opacity:0.10;transition:opacity var(--mood-transition) var(--ease);}
+.chart-grid-line{stroke:rgba(255,255,255,0.04);stroke-width:0.5;vector-effect:non-scaling-stroke;}
+.chart-dot{fill:#000;stroke:var(--mood);stroke-width:2;vector-effect:non-scaling-stroke;r:2.5;transition:r var(--fast) var(--ease),stroke var(--mood-transition) var(--ease);transform-origin:center;}
+.chart-dot:hover{r:5;fill:var(--mood);stroke-width:0;}
+.chart-hit{fill:transparent;cursor:crosshair;}
+.chart-hit:hover{fill:rgba(255,255,255,0.04);}
+.chart-tooltip{position:absolute;background:rgba(28,28,30,0.95);color:#fff;font-size:12px;padding:6px 12px;border-radius:12px;pointer-events:none;opacity:0;transform:translate(-50%,calc(-100% - 8px));transition:opacity var(--fast) var(--ease);white-space:nowrap;z-index:50;box-shadow:0 2px 16px rgba(0,0,0,0.4);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:0.5px solid rgba(255,255,255,0.08);}
+.chart-tooltip.show{opacity:1;}
+.chart-tooltip .tt-val{font-weight:600;}
+.chart-tooltip .tt-day{color:rgba(255,255,255,0.45);font-size:11px;margin-left:6px;}
+
+/* ============================================================
+   16. MASTERY SUMMARY
+   ============================================================ */
+.mastery-summary{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:24px;margin:0 20px 20px;border-radius:20px;
+  background:var(--card-bg);
+  backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);
+  border:0.5px solid var(--card-border);
+  box-shadow:var(--card-shadow);
+  opacity:0;transform:translateY(10px);
+  animation:card-enter 500ms var(--ease-out) forwards;
+  transition:border-color var(--mood-transition) var(--ease);
+}
+.mastery-summary-label{font-size:16px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;}
+.mastery-summary-trend{font-size:15px;font-weight:600;color:var(--success);margin-left:12px;}
+.mastery-growth-speed{font-size:14px;font-weight:500;margin-top:8px;display:flex;align-items:center;gap:8px;}
+.mastery-growth-speed.speed-fast{color:var(--success);}
+.mastery-growth-speed.speed-mid{color:var(--warning);}
+.mastery-growth-speed.speed-slow{color:var(--text-tertiary);}
+.mastery-growth-speed svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+
+/* ============================================================
+   17. DIMENSION LIST
+   ============================================================ */
+.dim-list{display:flex;flex-direction:column;}
+.dim-row{display:flex;align-items:center;padding:16px 0;}
+.dim-row + .dim-row{border-top:1px solid rgba(255,255,255,0.04);}
+.dim-name{flex:1;font-size:15px;font-weight:500;color:var(--text-primary);}
+.dim-tag{font-size:12px;font-weight:500;letter-spacing:0.04em;color:var(--text-tertiary);margin-right:16px;font-family:'SF Mono',Menlo,Consolas,monospace;}
+.dim-trend{font-size:12px;font-weight:500;}
+.dim-trend.up{color:var(--success);}
+.dim-trend.neutral{color:var(--text-secondary);}
+.dim-trend.down{color:var(--warning);}
+
+/* ============================================================
+   18. HALF-LIFE BARS
+   ============================================================ */
+.halflife-list{display:flex;flex-direction:column;gap:16px;}
+.halflife-row{display:flex;flex-direction:column;gap:8px;}
+.halflife-header{display:flex;align-items:center;justify-content:space-between;}
+.halflife-name{font-size:13px;font-weight:500;color:var(--text-primary);}
+.halflife-status{font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;}
+.halflife-status.active{color:var(--success);background:var(--success-bg);}
+.halflife-status.moderate{color:var(--warning);background:var(--warning-bg);}
+.halflife-status.low{color:var(--text-tertiary);background:rgba(255,255,255,0.04);}
+.halflife-bar-wrap{width:100%;height:4px;border-radius:2px;background:rgba(255,255,255,0.04);overflow:hidden;}
+.halflife-bar-fill{height:100%;border-radius:2px;background:var(--mood);transition:width 0.8s ease-out,background var(--mood-transition) var(--ease);}
+
+/* Decay collapse */
+.decay-collapse{cursor:pointer;margin-top:16px;}
+.decay-collapse-trigger{font-size:12px;color:var(--text-tertiary);user-select:none;transition:color var(--fast) var(--ease);}
+.decay-collapse-trigger:hover{color:var(--mood);}
+.decay-collapse-body{max-height:0;overflow:hidden;transition:max-height 300ms var(--ease),margin-top 300ms var(--ease);font-size:12px;color:var(--text-tertiary);line-height:1.6;}
+.decay-collapse.expanded .decay-collapse-body{max-height:80px;margin-top:8px;}
+
+/* ============================================================
+   19. GROWTH ACTIONS -- Apple square buttons
+   ============================================================ */
+.growth-actions-wrap{
+  margin:0 20px;padding:24px;margin-bottom:20px;
+  background:var(--card-bg);
+  backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);
+  border:0.5px solid var(--card-border);border-radius:20px;
+  box-shadow:var(--card-shadow);
+  opacity:0;transform:translateY(10px);
+  animation:card-enter 500ms var(--ease-out) forwards;
+  transition:border-color var(--mood-transition) var(--ease);
+}
+.action-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.action-btn{
+  font-size:11px;font-weight:500;
+  padding:14px 8px 10px;border-radius:12px;
+  border:none;
+  background:rgba(255,255,255,0.04);
+  color:var(--text-secondary);cursor:pointer;
+  transition:all var(--fast) var(--ease);
+  text-align:center;-webkit-tap-highlight-color:transparent;
+  min-height:64px;display:flex;flex-direction:column;
+  align-items:center;gap:8px;position:relative;overflow:hidden;
+}
+.action-btn:hover{background:var(--mood-deep);color:var(--mood);}
+.action-btn:active{transform:scale(0.95);opacity:0.8;}
+.action-btn .action-icon{width:20px;height:20px;}
+.action-btn .action-icon svg{width:20px;height:20px;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+
+/* ============================================================
+   20. SYNC BAR
+   ============================================================ */
+.sync-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(255,255,255,0.04);border-radius:12px;margin-bottom:12px;font-size:13px;font-weight:500;color:var(--text-secondary);width:100%;}
+.sync-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 14px;border-radius:20px;border:none;background:transparent;font-size:12px;font-weight:500;color:var(--text-secondary);cursor:pointer;transition:all var(--fast) var(--ease);white-space:nowrap;min-height:34px;}
+.sync-btn:hover{color:var(--mood);}
+.sync-btn:active{transform:scale(0.94);}
+.sync-btn.on{background:var(--mood-soft);color:var(--mood);}
+.sync-btn svg{width:13px;height:13px;stroke:currentColor;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.sync-status{margin-left:auto;font-size:12px;font-weight:500;color:var(--text-tertiary);white-space:nowrap;}
+
+/* ============================================================
+   21. LOG BOX
+   ============================================================ */
+.log-box{background:rgba(255,255,255,0.02);border-radius:12px;padding:16px;max-height:180px;overflow-y:auto;margin-top:12px;font-size:12px;line-height:1.6;}
+.log-box::-webkit-scrollbar{width:2px;}
+.log-box::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:1px;}
+.log-collapsible{margin-top:12px;}
+.log-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:12px;background:rgba(255,255,255,0.03);cursor:pointer;font-size:13px;font-weight:500;color:var(--text-secondary);-webkit-tap-highlight-color:transparent;transition:background var(--fast) var(--ease);}
+.log-toggle:hover{background:rgba(255,255,255,0.06);}
+.log-toggle:active{opacity:0.6;}
+.log-toggle-text{display:flex;align-items:center;gap:6px;}
+.log-toggle-chevron{width:14px;height:14px;stroke:var(--text-secondary);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;transition:transform var(--fast) var(--ease);flex-shrink:0;}
+.log-collapsible.expanded .log-toggle-chevron{transform:rotate(180deg);}
+.log-collapsible-body{max-height:0;overflow:hidden;transition:max-height 400ms var(--ease),opacity var(--normal) var(--ease);opacity:0;}
+.log-collapsible.expanded .log-collapsible-body{max-height:300px;opacity:1;}
+.log-collapsible .log-box{margin-top:8px;}
+.log-row{display:flex;flex-direction:column;gap:1px;padding:4px 0;color:var(--text-secondary);opacity:0;animation:log-fade-in 200ms var(--ease) forwards;}
+@keyframes log-fade-in{from{opacity:0;}to{opacity:1;}}
+.log-row-main{display:flex;gap:8px;}
+.log-row-detail{display:flex;gap:8px;padding-left:52px;font-size:11px;color:var(--text-tertiary);}
+.log-time{flex-shrink:0;}
+.log-msg{flex:1;min-width:0;}
+.log-delta{flex-shrink:0;font-weight:500;display:flex;gap:4px;}
+.log-delta.pos{color:var(--success);}
+.log-delta.neg{color:var(--warning);}
+
+/* ============================================================
+   22. MEMBER GRID
+   ============================================================ */
+.member-grid{display:flex;flex-direction:column;gap:12px;padding:0 20px;}
+.member-card{
+  display:flex;align-items:center;gap:20px;padding:20px;
+  border-radius:20px;
+  background:var(--card-bg);
+  backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);
+  box-shadow:var(--card-shadow);
+  border:0.5px solid var(--card-border);
+  cursor:pointer;
+  transition:background var(--fast) var(--ease),border-color var(--mood-transition) var(--ease),box-shadow var(--mood-transition) var(--ease);
+  -webkit-tap-highlight-color:transparent;
+  opacity:0;transform:translateY(10px);
+  animation:card-enter 500ms var(--ease-out) forwards;
+}
+.member-card:hover{background:rgba(44,44,46,0.8);}
+.member-card:active{transform:scale(0.98);}
+.member-card.selected{
+  background:rgba(44,44,46,0.9);
+  border-color:var(--mood);
+  box-shadow:0 0 20px var(--mood-glow),var(--card-shadow);
+}
+.member-avatar{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:var(--text-secondary);overflow:hidden;flex-shrink:0;}
+.member-avatar img{width:100%;height:100%;object-fit:cover;}
+.member-info{flex:1;min-width:0;}
+.member-name{font-size:17px;font-weight:600;color:var(--text-primary);line-height:1.2;letter-spacing:-0.01em;display:flex;align-items:center;gap:8px;}
+.member-role{font-size:13px;color:var(--text-secondary);margin-top:3px;}
+.member-meta{font-size:12px;color:var(--text-tertiary);margin-top:5px;line-height:1.4;}
+.member-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background var(--mood-transition) var(--ease);}
+.member-status-dot.focusing{background:#00C7BE;}
+.member-status-dot.recharging{background:#FF6482;}
+.member-status-dot.collaborating{background:#FF9F0A;}
+.member-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--text-tertiary);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--fast) var(--ease);}
+.member-card.selected .member-check{border-color:var(--mood);background:var(--mood);transition:all var(--mood-transition) var(--ease);}
+.member-check svg{width:12px;height:12px;stroke:#fff;stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:0;transition:opacity var(--fast) var(--ease);}
+.member-card.selected .member-check svg{opacity:1;}
+
+/* ============================================================
+   23. EDIT OVERLAY
+   ============================================================ */
+.edit-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.85);
+  backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+  z-index:200;opacity:0;pointer-events:none;
+  transition:opacity var(--normal) var(--ease);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+}
+.edit-overlay.open{opacity:1;pointer-events:auto;}
+.edit-overlay-content{max-width:600px;margin:0 auto;padding:calc(48px + env(safe-area-inset-top,0px)) 24px calc(48px + var(--safe-bottom));}
+.edit-overlay-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;}
+.edit-overlay-title{font-size:24px;font-weight:700;color:var(--text-primary);}
+.edit-overlay-close{width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);transition:all var(--fast) var(--ease);-webkit-tap-highlight-color:transparent;}
+.edit-overlay-close:hover{background:rgba(255,255,255,0.10);color:var(--text-primary);}
+.edit-overlay-close:active{transform:scale(0.9);}
+.edit-overlay-close svg{width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.edit-section-block{margin-bottom:28px;}
+.edit-section-title{font-size:13px;font-weight:500;color:var(--text-tertiary);letter-spacing:0.06em;margin-bottom:12px;text-transform:uppercase;}
+.edit-avatar-wrap{position:relative;width:72px;height:72px;border-radius:50%;overflow:hidden;flex-shrink:0;cursor:pointer;}
+.edit-avatar-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
+.edit-avatar-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity var(--fast) var(--ease);}
+.edit-avatar-wrap:hover .edit-avatar-overlay{opacity:1;}
+.edit-avatar-overlay svg{width:22px;height:22px;stroke:#fff;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.edit-top-row{display:flex;gap:16px;align-items:flex-start;}
+.edit-bio-area{flex:1;min-width:0;}
+.edit-bio-textarea{width:100%;min-height:72px;border:0.5px solid rgba(255,255,255,0.10);border-radius:12px;padding:12px;font-size:15px;color:var(--text-primary);background:rgba(255,255,255,0.04);resize:vertical;line-height:1.5;transition:border-color var(--fast) var(--ease);outline:none;font-family:inherit;}
+.edit-bio-textarea::placeholder{color:var(--text-tertiary);}
+.edit-bio-textarea:focus{border-color:var(--mood);}
+.edit-tags-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
+.edit-tag{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:20px;font-size:13px;font-weight:500;color:var(--text-secondary);background:rgba(255,255,255,0.06);}
+.edit-tag .tag-remove{cursor:pointer;font-size:15px;line-height:1;color:var(--text-tertiary);transition:all var(--fast) var(--ease);margin-left:2px;}
+.edit-tag .tag-remove:hover{color:var(--warning);}
+.edit-tag .tag-remove:active{transform:scale(0.8);}
+.edit-add-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:20px;border:0.5px dashed rgba(255,255,255,0.12);background:transparent;font-size:13px;color:var(--text-tertiary);cursor:pointer;transition:all var(--fast) var(--ease);-webkit-tap-highlight-color:transparent;}
+.edit-add-btn:hover{border-color:var(--mood-soft);color:var(--mood);}
+.edit-add-btn:active{transform:scale(0.94);}
+.edit-inline-input{border:0.5px solid var(--mood);border-radius:8px;padding:6px 10px;font-size:13px;color:var(--text-primary);outline:none;width:120px;background:rgba(255,255,255,0.04);font-family:inherit;}
+
+/* ============================================================
+   24. TOASTS
+   ============================================================ */
+.undo-toast{
+  position:fixed;top:16px;left:50%;
+  transform:translateX(-50%) translateY(-60px);
+  max-width:398px;width:calc(100% - 32px);
+  padding:10px 16px;border-radius:20px;
+  background:rgba(28,28,30,0.95);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:0.5px solid rgba(255,255,255,0.08);
+  color:var(--text-primary);
+  font-size:13px;font-weight:500;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  z-index:200;box-shadow:0 2px 20px rgba(0,0,0,0.3);
+  opacity:0;transition:all var(--normal) var(--ease);pointer-events:none;
+}
+.undo-toast.show{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:auto;}
+.undo-toast .undo-msg{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.undo-toast .undo-btn{padding:5px 14px;border-radius:20px;background:var(--mood);color:#fff;font-size:12px;font-weight:600;border:none;cursor:pointer;flex-shrink:0;transition:all var(--fast) var(--ease);}
+.undo-toast .undo-btn:hover{opacity:0.8;}
+.undo-toast .undo-btn:active{transform:scale(0.94);}
+.status-toast{
+  position:fixed;bottom:calc(var(--tab-bar-h) + 24px + var(--safe-bottom));
+  left:50%;transform:translateX(-50%) translateY(20px);
+  max-width:300px;padding:8px 16px;border-radius:20px;
+  background:rgba(28,28,30,0.95);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:0.5px solid rgba(255,255,255,0.08);
+  color:var(--text-primary);
+  font-size:12px;font-weight:500;z-index:150;
+  opacity:0;transition:all var(--normal) var(--ease);
+  pointer-events:none;white-space:nowrap;
+}
+.status-toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* ============================================================
+   25. HEATMAP TOOLTIP
+   ============================================================ */
+.heatmap-tooltip{
+  position:fixed;padding:6px 10px;
+  background:rgba(28,28,30,0.95);color:#fff;
+  font-size:12px;
+  border-radius:8px;pointer-events:none;z-index:999;
+  white-space:nowrap;opacity:0;
+  transition:opacity 100ms var(--ease);
+  box-shadow:0 2px 12px rgba(0,0,0,0.3);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+}
+.heatmap-tooltip.visible{opacity:1;}
+
+/* ============================================================
+   26. TAB HERO (Growth / Members)
+   ============================================================ */
+.tab-hero{padding:calc(48px + env(safe-area-inset-top,0px)) 24px 20px;}
+.tab-hero .section-label{margin-bottom:8px;}
+.tab-hero .section-title{font-size:34px;font-weight:700;margin-bottom:4px;}
+.tab-hero .section-subtitle{font-size:15px;font-weight:500;color:var(--text-secondary);margin-top:4px;}
+
+/* ============================================================
+   27. DESKTOP
+   ============================================================ */
+@media(min-width:431px){
+  .undo-toast{position:absolute;top:16px;}
+  .status-toast{position:absolute;bottom:calc(var(--tab-bar-h) + 24px);}
+}
+
+@keyframes ripple{0%{transform:scale(0);opacity:1;}100%{transform:scale(2);opacity:0;}}
+</style>
+</head>
+<body>
+
+<!-- Ambient Background -->
+<div class="ambient-bg focusing" id="ambientFocusing"></div>
+<div class="ambient-bg recharging" id="ambientRecharging"></div>
+<div class="ambient-bg collaborating" id="ambientCollaborating"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<div class="app-shell" id="appShell">
+
+  <!-- Undo Toast -->
+  <div class="undo-toast" id="undoToast">
+    <span class="undo-msg" id="undoMsg"></span>
+    <button class="undo-btn" id="undoBtn">撤销</button>
+  </div>
+
+  <!-- Status Toast -->
+  <div class="status-toast" id="statusToast"></div>
+
+  <div class="page-content">
+
+    <!-- ========== TAB 1: PROFILE ========== -->
+    <div class="tab-view active visible" id="tabProfile">
+      <div class="profile-hero">
+        <!-- Hero gradient overlay -->
+        <div class="hero-gradient" id="heroGradient"></div>
+
+        <div class="section-label">
+          <span class="dot"></span>
+          ANIMA
+          <span id="currentDateLabel" style="margin-left:auto;font-size:11px;letter-spacing:0.04em;text-transform:none;font-weight:500;"></span>
+        </div>
+        <div class="hero-name-row">
+          <h1 class="section-title" id="heroName"></h1>
+          <div class="name-edit-btn" id="nameEditBtn" onclick="toggleNameEdit()">
+            <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+        <div id="heroRoleWrap"></div>
+        <div id="heroStatus"></div>
+      </div>
+
+      <!-- Stats Card -- Ring Progress -->
+      <div class="card" style="animation-delay:0.05s;">
+        <div class="stats-rings-row">
+          <!-- Energy Ring -->
+          <div class="ring-group">
+            <div class="ring-progress">
+              <svg class="ring-progress" viewBox="0 0 100 100">
+                <circle class="ring-track" cx="50" cy="50" r="42"/>
+                <circle class="ring-fill" id="ringEnergy" cx="50" cy="50" r="42"
+                        stroke-dasharray="263.89" stroke-dashoffset="263.89"
+                        transform="rotate(-90 50 50)"/>
+              </svg>
+              <div class="ring-center">
+                <span class="ring-value" id="ringEnergyVal">--</span>
+                <span class="ring-label-text">精力</span>
+              </div>
+            </div>
+            <span class="ring-state" id="statEnergy">--</span>
+          </div>
+          <!-- Focus Ring -->
+          <div class="ring-group">
+            <div class="ring-progress">
+              <svg class="ring-progress" viewBox="0 0 100 100">
+                <circle class="ring-track" cx="50" cy="50" r="42"/>
+                <circle class="ring-fill" id="ringFocus" cx="50" cy="50" r="42"
+                        stroke-dasharray="263.89" stroke-dashoffset="263.89"
+                        transform="rotate(-90 50 50)"/>
+              </svg>
+              <div class="ring-center">
+                <span class="ring-value" id="ringFocusVal">--</span>
+                <span class="ring-label-text">专注度</span>
+              </div>
+            </div>
+            <span class="ring-state" id="statFocus">--</span>
+          </div>
+        </div>
+
+        <!-- Hidden bars for JS compatibility -->
+        <span class="js-compat-bar"><span class="halflife-bar-fill" id="barEnergy" style="width:0%"></span></span>
+        <span class="js-compat-bar"><span class="halflife-bar-fill" id="barFocus" style="width:0%"></span></span>
+        <span class="js-compat-bar"><span class="halflife-bar-fill" id="barMastery" style="width:0%"></span></span>
+
+        <!-- Rhythm + Heatmap -->
+        <div class="rhythm-section">
+          <div class="rhythm-header">
+            <span class="rhythm-label">
+              <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              近期节奏
+            </span>
+            <span class="rhythm-state" id="statMastery">--</span>
+          </div>
+          <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+            <div class="activity-heatmap">
+              <div id="activityHeatmap" style="width:100%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Role Tags + Tools + Skills -->
+      <div class="card" style="animation-delay:0.1s;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div class="compact-label" style="margin-bottom:0;">角色</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="collab-mini-inline" id="collabInline"></div>
+            <button class="inline-edit-btn" onclick="openEditOverlay('role')" title="编辑角色">
+              <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="role-tags" id="roleTags"></div>
+
+        <div style="margin-top:24px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div class="compact-label" style="margin-bottom:0;">工具 · 能力</div>
+            <button class="inline-edit-btn" onclick="openEditOverlay('tools')" title="编辑工具与能力">
+              <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+          </div>
+          <div class="compact-tools" id="compactTools"></div>
+          <div class="compact-skills" id="compactSkills"></div>
+        </div>
+      </div>
+
+      <div style="display:none;" id="editCardWrap"></div>
+    </div>
+
+
+    <!-- Edit Overlay -->
+    <div class="edit-overlay" id="editOverlay">
+      <div class="edit-overlay-content" id="editOverlayContent">
+        <div class="edit-overlay-header">
+          <span class="edit-overlay-title">编辑资料</span>
+          <button class="edit-overlay-close" onclick="closeEditOverlay()">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div id="editOverlayBody"></div>
+      </div>
+    </div>
+
+    <!-- ========== TAB 2: GROWTH ========== -->
+    <div class="tab-view" id="tabGrowth">
+      <div class="tab-hero">
+        <div class="section-label">
+          <span class="dot"></span>
+          成长 · 90天
+        </div>
+        <h1 class="section-title">成长</h1>
+        <p class="section-subtitle">每一天的积累，都在描绘你的轨迹</p>
+      </div>
+
+      <div id="masterySummaryCard"></div>
+
+      <div class="card" style="animation-delay:0.1s;">
+        <div class="compact-label">成长曲线</div>
+        <div class="chart-wrap">
+          <svg class="chart-svg" id="growthChart" viewBox="0 0 600 160" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <linearGradient id="accentGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:var(--mood);stop-opacity:0.15"/>
+                <stop offset="100%" style="stop-color:var(--mood);stop-opacity:0"/>
+              </linearGradient>
+            </defs>
+            <g id="chartGridLines"></g>
+            <path class="chart-area" id="chartAreaPath" fill="url(#accentGrad)" d=""/>
+            <path class="chart-line" id="chartLinePath" d=""/>
+            <g id="chartDotGroup"></g>
+            <g id="chartHitGroup"></g>
+          </svg>
+          <div class="chart-tooltip" id="chartTooltip"></div>
+        </div>
+      </div>
+
+      <div class="card" id="dimListCard" style="animation-delay:0.15s;"></div>
+
+      <div class="growth-actions-wrap" style="animation-delay:0.25s;">
+        <div class="sync-bar" id="growthSyncBar">
+          <button class="sync-btn" id="growthSyncBtn">
+            <svg viewBox="0 0 16 16"><path d="M2 8a6 6 0 0 1 10.5-4"/><path d="M14 8a6 6 0 0 1-10.5 4"/><path d="M12 2v3h-3"/><path d="M4 14v-3h3"/></svg>
+            <span id="growthSyncLabel">刷新</span>
+          </button>
+          <span class="sync-status" id="growthSyncStatus">未同步</span>
+          <button class="sync-btn" id="growthSyncToggle">自动</button>
+        </div>
+        <div class="action-grid" id="growthActionGrid"></div>
+        <div class="log-collapsible" id="logCollapsible">
+          <div class="log-toggle" onclick="toggleLog()">
+            <span class="log-toggle-text">
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              行为日志
+            </span>
+            <svg class="log-toggle-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="log-collapsible-body">
+            <div class="log-box">
+              <div id="growthLogEntries"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== TAB 3: MEMBERS ========== -->
+    <div class="tab-view" id="tabMembers">
+      <div class="tab-hero">
+        <div class="section-label">
+          <span class="dot"></span>
+          我的团队
+        </div>
+        <h1 class="section-title">成员</h1>
+        <p class="section-subtitle">切换视角，看见每个人的状态</p>
+      </div>
+
+      <div class="member-grid" id="memberGrid"></div>
+
+      <div style="height:48px;"></div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Tab Bar -->
+  <nav class="tab-bar" id="tabBar">
+    <button class="tab-btn active" data-tab="tabProfile">
+      <span>首页</span>
+    </button>
+    <button class="tab-btn" data-tab="tabGrowth">
+      <span>成长</span>
+    </button>
+    <button class="tab-btn" data-tab="tabMembers">
+      <span>我的</span>
+    </button>
+  </nav>
+</div>
+
+<script>
+
+/* ============================================================
+   DATA
+   ============================================================ */
+const members = [
+  {
+    id: 'alex', name: 'Alex Chen', initial: 'AC', avatarUrl: 'avatar-alex.jpg',
+    role: '全栈工程师', location: '武汉', tenure: '14个月', tenureMonths: 14,
+    bio: '热爱开源，喜欢探索新技术',
+    status: 'focusing',
+    energy: 65, focus: 80,
+    mastery: {
+      total: 78,
+      dimensions: [
+        { name: '代码能力', tag: 'Code', value: 88, growth: '+5' },
+        { name: '架构能力', tag: 'Arch', value: 72, growth: '+3' },
+        { name: '审查能力', tag: 'Review', value: 55, growth: '+2' }
+      ]
+    },
+    skills: [
+      { name: 'React', level: 'common', note: '5人' },
+      { name: '系统设计', level: 'common', note: '3人' },
+      { name: 'SQL优化', level: 'familiar', note: '2人' },
+      { name: 'Python', level: 'familiar', note: '1人' },
+      { name: 'Rust', level: 'exploring', note: '' },
+      { name: 'AI工程化', level: 'common', note: '4人' }
+    ],
+    tools: ['Cursor', 'Claude', 'React', 'FastAPI', 'PostgreSQL', 'Docker'],
+    collabScore: 7,
+    growthData: [35,38,42,40,45,48,52,50,55,58,62,60,65,68,72,70,75,78,76,78,75,77,79,78,80,78,82,85,88,86],
+    taskCounts: { 'frontend-component': 12, 'backend-api': 8, 'documentation': 5, 'testing': 6, 'bugfix-frontend': 3 },
+    roleTags: ['PR Reviewer', '文档守护者', '系统架构'],
+    endorsements: {
+      'React': '在支付系统重构中的组件设计帮助了团队决策',
+      '系统设计': '独立完成了微服务拆分方案的架构评审'
+    }
+  },
+  {
+    id: 'mira', name: 'Mira Wang', initial: 'MW', avatarUrl: 'avatar-mira.jpg',
+    role: '产品经理', location: '武汉', tenure: '10个月', tenureMonths: 10,
+    bio: '用设计连接用户与产品',
+    status: 'collaborating',
+    energy: 72, focus: 60,
+    mastery: {
+      total: 62,
+      dimensions: [
+        { name: '设计能力', tag: 'Design', value: 78, growth: '+4' },
+        { name: '协调能力', tag: 'Coord', value: 65, growth: '+3' },
+        { name: '洞察能力', tag: 'Discov', value: 48, growth: '+1' }
+      ]
+    },
+    skills: [
+      { name: '用户旅程', level: 'common', note: '3人' },
+      { name: '数据决策', level: 'familiar', note: '' },
+      { name: 'Figma', level: 'common', note: '4人' },
+      { name: '需求文档', level: 'common', note: '2人' },
+      { name: '用户研究', level: 'familiar', note: '1人' },
+      { name: '商业分析', level: 'exploring', note: '' }
+    ],
+    tools: ['Figma', 'Notion', 'Linear', 'Miro', 'Cursor', 'Claude'],
+    collabScore: 12,
+    growthData: [20,22,25,28,30,32,35,38,40,42,44,46,45,48,50,52,54,56,55,58,60,62,60,63,65,64,66,68,70,68],
+    taskCounts: { 'product-design': 8, 'prd-document': 6, 'user-research': 4, 'cross-team-collab': 9 },
+    roleTags: ['需求拆解', '用户旅程', '跨团队协调'],
+    endorsements: {
+      '用户旅程': '用户旅程地图帮助团队发现关键体验断点',
+      '跨团队协调': '推动了 3 个跨部门项目的顺利交付'
+    }
+  },
+  {
+    id: 'kai', name: 'Kai Li', initial: 'KL', avatarUrl: 'avatar-kai.jpg',
+    role: '算法工程师', location: '武汉', tenure: '8个月', tenureMonths: 8,
+    bio: '在数据中寻找模式',
+    status: 'recharging',
+    energy: 55, focus: 45,
+    mastery: {
+      total: 71,
+      dimensions: [
+        { name: '建模能力', tag: 'Model', value: 82, growth: '+6' },
+        { name: '数据能力', tag: 'Data', value: 70, growth: '+2' },
+        { name: '研究能力', tag: 'Research', value: 58, growth: '+1' }
+      ]
+    },
+    skills: [
+      { name: 'PyTorch', level: 'common', note: '4人' },
+      { name: '计算机视觉', level: 'common', note: '5人' },
+      { name: '遥感影像', level: 'familiar', note: '2人' },
+      { name: '模型部署', level: 'familiar', note: '1人' },
+      { name: 'NLP', level: 'exploring', note: '' },
+      { name: '强化学习', level: 'exploring', note: '' }
+    ],
+    tools: ['PyTorch', 'Python', 'OpenCV', 'CUDA', 'NumPy', 'Cursor'],
+    collabScore: 4,
+    growthData: [30,32,35,38,40,42,45,48,50,52,55,58,60,62,65,63,66,68,70,72,70,73,75,77,76,78,79,80,82,80],
+    taskCounts: { 'model-training': 10, 'data-processing': 7, 'algorithm-research': 5, 'model-deployment': 4 },
+    roleTags: ['模型调优', '数据管线', '实验设计'],
+    endorsements: {
+      'PyTorch': '训练流程优化使模型收敛速度提升 40%',
+      '计算机视觉': '遥感影像分割模型达到 SOTA 精度'
+    }
+  }
+];
+
+const actions = [
+  { key: 'pr', label: '完成 PR', desc: '精力消耗 · 专注消耗',
+    icon: '<svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>' },
+  { key: 'deepwork', label: '深度工作', desc: '专注消耗 · 精力消耗',
+    icon: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' },
+  { key: 'rest', label: '休息', desc: '精力恢复 · 专注恢复',
+    icon: '<svg viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>' },
+  { key: 'review', label: 'Review', desc: '精力消耗 · 成长',
+    icon: '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' },
+  { key: 'meeting', label: '会议', desc: '精力消耗 · 专注消耗',
+    icon: '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></svg>' },
+  { key: 'pioneer', label: '开拓', desc: '精力消耗 · 新方向',
+    icon: '<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' }
+];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let currentId = 'alex';
+let lastAction = null;
+let undoTimer = null;
+let activeTab = 'tabProfile';
+let statusToastTimer = null;
+
+const lastStatValues = { energy: 0, focus: 0 };
+
+const $ = id => document.getElementById(id);
+const getMember = id => members.find(m => m.id === id);
+
+const calcTenureDays = months => Math.round(months * 30.44);
+
+/* Ring circumference: 2 * PI * 42 = 263.8938... */
+const RING_CIRCUMFERENCE = 2 * Math.PI * 42;
+
+/* ============================================================
+   animateValue
+   ============================================================ */
+function animateValue(el, start, end, duration, formatter) {
+  if (start === end) {
+    el.textContent = formatter ? formatter(end) : end;
+    return;
+  }
+  el.classList.remove("bouncing");
+  void el.offsetWidth;
+  el.classList.add("bouncing");
+  const startTime = performance.now();
+  const diff = end - start;
+
+  function step(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = Math.round(start + diff * eased);
+    el.textContent = formatter ? formatter(current) : current;
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      el.textContent = end;
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+/* ============================================================
+   showStatusToast
+   ============================================================ */
+function showStatusToast(msg) {
+  const toast = $('statusToast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  if (statusToastTimer) clearTimeout(statusToastTimer);
+  statusToastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 1500);
+}
+
+/* ============================================================
+   switchTab
+   ============================================================ */
+function switchTab(tabId) {
+  if (activeTab === tabId) return;
+
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tabId);
+  });
+
+  const currentView = $(activeTab);
+  currentView.classList.remove('visible');
+
+  setTimeout(() => {
+    currentView.classList.remove('active');
+    activeTab = tabId;
+    const nextView = $(tabId);
+    nextView.classList.add('active');
+
+    void nextView.offsetHeight;
+    nextView.classList.add('visible');
+
+    if (tabId === 'tabGrowth') {
+      renderMasterySummary(getMember(currentId));
+      renderGrowth(getMember(currentId));
+      renderDimList(getMember(currentId));
+      renderGrowthActionGrid();
+    }
+    if (tabId === 'tabMembers') {
+      renderMemberGrid();
+    }
+  }, 400);
+}
+
+/* ============================================================
+   applyCardStagger
+   ============================================================ */
+function applyCardStagger(container) {
+  const cards = container.querySelectorAll('.card, .mastery-summary, .member-card');
+  cards.forEach((card, i) => {
+    card.style.animationDelay = (0.05 * i) + 's';
+    card.addEventListener('animationend', () => {
+      card.style.willChange = 'auto';
+    }, { once: true });
+  });
+}
+
+/* ============================================================
+   renderProfile
+   ============================================================ */
+function renderProfile(m) {
+  /* Date label */
+  const dateLabel = $('currentDateLabel');
+  if (dateLabel) {
+    const now = new Date();
+    dateLabel.textContent = (now.getMonth() + 1) + ' 月 ' + now.getDate() + ' 日';
+  }
+
+  /* Name */
+  $('heroName').textContent = m.name;
+
+  /* Role + location + tenure */
+  $('heroRoleWrap').innerHTML = `
+    <p class="profile-role">
+      ${m.role} · ${m.location}
+      <span class="tenure-badge">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        ${calcTenureDays(m.tenureMonths)}天
+      </span>
+    </p>
+  `;
+
+  /* Status pills */
+  const statusLabels = { focusing: '深度工作中', recharging: '充电中', collaborating: '协作中' };
+  $('heroStatus').innerHTML = `
+    <div class="status-pills-row">
+      <button class="status-pill-btn focusing ${m.status === 'focusing' ? 'active' : ''}" data-status="focusing">
+        <span class="status-dot"></span>${statusLabels.focusing}
+      </button>
+      <button class="status-pill-btn recharging ${m.status === 'recharging' ? 'active' : ''}" data-status="recharging">
+        <span class="status-dot"></span>${statusLabels.recharging}
+      </button>
+      <button class="status-pill-btn collaborating ${m.status === 'collaborating' ? 'active' : ''}" data-status="collaborating">
+        <span class="status-dot"></span>${statusLabels.collaborating}
+      </button>
+    </div>
+  `;
+
+  /* Bind status pill clicks */
+  document.querySelectorAll('.status-pill-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const newStatus = btn.dataset.status;
+      if (m.status !== newStatus) {
+        m.status = newStatus;
+        document.querySelectorAll('.status-pill-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateAmbientBg(newStatus);
+        showStatusToast('已进入' + statusLabels[newStatus] + '模式');
+        addGrowthLog('切换模式 → ' + statusLabels[newStatus]);
+      }
+    });
+  });
+
+  /* Energy + Focus state text */
+  const newEnergy = Math.round(m.energy);
+  const newFocus = Math.round(m.focus);
+
+  const energyState = newEnergy > 75 ? '精力充沛' : newEnergy > 50 ? '状态不错' : newEnergy > 25 ? '该休息一下' : '好好歇歇吧';
+  const focusState = newFocus > 70 ? '适合深度工作' : newFocus > 40 ? '可以做浅层任务' : '注意力有些分散';
+  const elEnergy = $('statEnergy');
+  if (elEnergy) elEnergy.textContent = energyState;
+  const elFocus = $('statFocus');
+  if (elFocus) elFocus.textContent = focusState;
+  const weekActivity = Object.values(m.taskCounts).reduce((s, c) => s + c, 0);
+  const elMastery = $('statMastery');
+  if (elMastery) {
+    if (weekActivity >= 30) elMastery.textContent = '本周很充实';
+    else if (weekActivity >= 15) elMastery.textContent = '稳步前进中';
+    else if (weekActivity >= 5) elMastery.textContent = '正在蓄力';
+    else elMastery.textContent = '刚开始热身';
+  }
+  const tabActivity = $('tabActivity');
+  if (tabActivity) {
+    const total = Object.values(m.taskCounts).reduce((s, c) => s + c, 0);
+    tabActivity.textContent = total > 0 ? '·' : '';
+    tabActivity.style.display = total > 0 ? 'flex' : 'none';
+  }
+  lastStatValues.energy = newEnergy;
+  lastStatValues.focus = newFocus;
+
+  /* Hidden bars for JS compat */
+  const barEnergy = $('barEnergy');
+  if (barEnergy) barEnergy.style.width = Math.max(0, Math.min(100, m.energy)) + '%';
+  const barFocus = $('barFocus');
+  if (barFocus) barFocus.style.width = Math.max(0, Math.min(100, m.focus)) + '%';
+  const barMastery = $('barMastery');
+  if (barMastery) barMastery.style.width = Math.max(0, Math.min(100, m.mastery.total)) + '%';
+
+  /* Ring progress -- show state word, not number */
+  const rEP = $('ringEnergy');
+  const rFP = $('ringFocus');
+  const rVEP = $('ringEnergyVal');
+  const rVFP = $('ringFocusVal');
+  if (rEP) rEP.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - m.energy / 100);
+  if (rFP) rFP.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - m.focus / 100);
+  if (rVEP) rVEP.textContent = newEnergy;
+  if (rVFP) rVFP.textContent = newFocus;
+
+  /* Role tags */
+  const roleTags = $('roleTags');
+  if (roleTags) roleTags.innerHTML = m.roleTags.map(t =>
+    `<span class="role-tag">${t}</span>`
+  ).join('');
+
+  /* Tools */
+  const compactTools = $('compactTools');
+  if (compactTools) compactTools.innerHTML = m.tools.map((t, i) =>
+    `<span class="tool-item">${t}</span>`
+  ).join('');
+
+  /* Skills */
+  const levelLabels = { common: '常用', familiar: '了解', exploring: '探索中' };
+  const compactSkills = $('compactSkills');
+  if (compactSkills) compactSkills.innerHTML = m.skills.map(s =>
+    `<span class="compact-skill">
+      <span class="skill-dot ${s.level}"></span>
+      <strong>${s.name}</strong>
+      ${levelLabels[s.level]}${s.note ? ' · ' + s.note : ''}
+    </span>`
+  ).join('');
+
+  /* Collab inline */
+  const collabLevel = m.collabScore > 8 ? '活跃' : m.collabScore > 4 ? '稳定' : '偶尔';
+  const collabInline = $('collabInline');
+  if (collabInline) collabInline.innerHTML = `
+    <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+    协作 ${collabLevel}
+  `;
+
+  /* Hero gradient */
+  updateHeroGradient(m.status);
+}
+
+function updateHeroGradient(status) {
+  const el = $('heroGradient');
+  if (!el) return;
+  const colors = {
+    focusing: 'rgba(0,199,190,0.20)',
+    recharging: 'rgba(255,100,130,0.20)',
+    collaborating: 'rgba(255,159,10,0.20)'
+  };
+  el.style.background = `linear-gradient(180deg, ${colors[status] || colors.focusing} 0%, transparent 100%)`;
+}
+
+/* ============================================================
+   renderMasterySummary
+   ============================================================ */
+function renderMasterySummary(m) {
+  const totalGrowth = m.mastery.dimensions.reduce((s, d) => s + parseInt(d.growth.replace('+', '')), 0);
+
+  let speedText, speedClass, speedIcon;
+  if (totalGrowth > 10) {
+    speedText = '你最近做得很好，继续保持';
+    speedClass = 'speed-fast';
+    speedIcon = '<svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
+  } else if (totalGrowth > 5) {
+    speedText = '在正确的方向上';
+    speedClass = 'speed-mid';
+    speedIcon = '<svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>';
+  } else {
+    speedText = '也许可以试试新的方向';
+    speedClass = 'speed-slow';
+    speedIcon = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+  }
+
+  const trendText = totalGrowth > 5 ? '↑ 本周在进步' : totalGrowth > 0 ? '→ 保持稳定' : '↓ 最近产出减少';
+
+  const card = $('masterySummaryCard');
+  if (card) card.innerHTML = `
+    <div class="mastery-summary">
+      <div style="flex:1;">
+        <div class="mastery-summary-label">成长状态</div>
+        <div class="mastery-growth-speed ${speedClass}">
+          ${speedIcon}
+          ${speedText}
+        </div>
+      </div>
+      <div class="mastery-summary-trend" style="white-space:nowrap;">${trendText}</div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   renderGrowth
+   ============================================================ */
+function renderGrowth(m) {
+  const data = m.growthData;
+  const w = 600, h = 160, pad = { t: 12, r: 12, b: 20, l: 28 };
+  const cw = w - pad.l - pad.r, ch = h - pad.t - pad.b;
+  const min = Math.min(...data) - 8;
+  const max = Math.max(...data) + 8;
+
+  const gridG = $('chartGridLines');
+  gridG.innerHTML = '';
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (ch / 4) * i;
+    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    ln.setAttribute('x1', pad.l); ln.setAttribute('x2', w - pad.r);
+    ln.setAttribute('y1', y); ln.setAttribute('y2', y);
+    ln.setAttribute('class', 'chart-grid-line');
+    gridG.appendChild(ln);
+  }
+
+  const pts = data.map((v, i) => ({
+    x: pad.l + (cw / (data.length - 1)) * i,
+    y: pad.t + ch - ((v - min) / (max - min)) * ch,
+    val: v, day: i * 3
+  }));
+
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    d += ` C ${p1.x + (p2.x - p0.x) / 6} ${p1.y + (p2.y - p0.y) / 6}, ${p2.x - (p3.x - p1.x) / 6} ${p2.y - (p3.y - p1.y) / 6}, ${p2.x} ${p2.y}`;
+  }
+
+  $('chartLinePath').setAttribute('d', d);
+  $('chartAreaPath').setAttribute('d', d + ` L ${pts[pts.length - 1].x} ${pad.t + ch} L ${pts[0].x} ${pad.t + ch} Z`);
+
+  const dotG = $('chartDotGroup');
+  dotG.innerHTML = '';
+  pts.forEach((p, i) => {
+    if (i % 5 === 0 || i === pts.length - 1) {
+      const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('cx', p.x); c.setAttribute('cy', p.y);
+      c.setAttribute('class', 'chart-dot');
+      c.setAttribute('r', '2.5');
+      dotG.appendChild(c);
+    }
+  });
+
+  const hitG = $('chartHitGroup');
+  const tip = $('chartTooltip');
+  const svg = $('growthChart');
+  hitG.innerHTML = '';
+  pts.forEach(p => {
+    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    hit.setAttribute('cx', p.x); hit.setAttribute('cy', p.y); hit.setAttribute('r', 14);
+    hit.setAttribute('class', 'chart-hit');
+    hit.addEventListener('mouseenter', () => {
+      const sw = svg.clientWidth || 1, sh = svg.clientHeight || 1;
+      const dataRatio = (p.val - min) / (max - min);
+      const stateDesc = dataRatio > 0.7 ? '状态很好' : dataRatio > 0.4 ? '状态良好' : '蓄力中';
+      tip.innerHTML = `<span class="tt-val">${stateDesc}</span><span class="tt-day">第 ${p.day} 天</span>`;
+      tip.style.left = (p.x / w * sw) + 'px';
+      tip.style.top = (p.y / h * sh) + 'px';
+      tip.classList.add('show');
+    });
+    hit.addEventListener('mouseleave', () => tip.classList.remove('show'));
+    hitG.appendChild(hit);
+  });
+}
+
+/* ============================================================
+   renderDimList
+   ============================================================ */
+function renderDimList(m) {
+  const dimListCard = $('dimListCard');
+  if (!dimListCard) return;
+
+  const now = Date.now();
+  const dimData = m.mastery.dimensions.map((d, i) => {
+    const lastActiveDaysAgo = 1 + Math.floor(Math.abs(Math.sin(i * 2.7 + now * 0.00000001)) * 13);
+    const decay = Math.pow(0.5, lastActiveDaysAgo / 7);
+    const activity = Math.round(d.value * decay);
+    let status, statusClass;
+    if (activity > 60) { status = '活跃'; statusClass = 'active'; }
+    else if (activity > 30) { status = '常规'; statusClass = 'moderate'; }
+    else { status = '休整'; statusClass = 'low'; }
+    return { name: d.name, activity, status, statusClass };
+  });
+
+  dimListCard.innerHTML = `
+    <div class="compact-label">能力维度</div>
+    <div class="dim-list">
+      ${m.mastery.dimensions.map((d, i) => {
+        const growthVal = parseInt(d.growth.replace('+', ''));
+        const dirClass = growthVal > 2 ? 'up' : growthVal > 0 ? 'neutral' : 'down';
+        const dirText = growthVal > 2 ? '↑ 本周活跃' : growthVal > 0 ? '→ 保持中' : '↓ 较少接触';
+        return `
+          <div class="dim-row">
+            <span class="dim-name">${d.name}</span>
+            <span class="dim-tag">${d.tag}</span>
+            <span class="dim-trend ${dirClass}">${dirText}</span>
+          </div>`;
+      }).join('')}
+    </div>
+    <div class="decay-collapse" onmouseenter="this.classList.add('expanded')" onmouseleave="this.classList.remove('expanded')">
+      <div class="decay-collapse-trigger">? 成长规则</div>
+      <div class="decay-collapse-body">持续在同一方向产出会让成长趋于稳定。尝试新的领域，可以获得额外的成长认可。你已经很熟练的方向，不需要反复证明。</div>
+    </div>
+    <div style="margin-top: 24px;">
+      <div class="compact-label">半衰期活跃度</div>
+      <div class="halflife-list">
+        ${dimData.map(d => `
+          <div class="halflife-row">
+            <div class="halflife-header">
+              <span class="halflife-name">${d.name}</span>
+              <span class="halflife-status ${d.statusClass}">${d.status}</span>
+            </div>
+            <div class="halflife-bar-wrap">
+              <div class="halflife-bar-fill" style="width:${d.activity}%"></div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   renderMemberGrid
+   ============================================================ */
+function renderMemberGrid() {
+  const grid = $('memberGrid');
+  grid.innerHTML = '';
+  members.forEach((m, idx) => {
+    const card = document.createElement('div');
+    card.className = 'member-card' + (m.id === currentId ? ' selected' : '');
+    card.dataset.id = m.id;
+    card.style.animationDelay = (0.05 * idx) + 's';
+
+    const avatarHtml = m.avatarUrl
+      ? `<div class="member-avatar"><img src="${m.avatarUrl}" alt="${m.name}" onerror="this.parentElement.textContent='${m.initial}'"></div>`
+      : `<div class="member-avatar">${m.initial}</div>`;
+
+    card.innerHTML = `
+      ${avatarHtml}
+      <div class="member-info">
+        <div class="member-name">${m.name}<span class="member-status-dot ${m.status}"></span></div>
+        <div class="member-role">${m.role}</div>
+        <div class="member-meta">${m.location} · ${calcTenureDays(m.tenureMonths)}天 · 协作${m.collabScore > 8 ? '活跃' : m.collabScore > 4 ? '稳定' : '偶尔'}</div>
+      </div>
+      <div class="member-check">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+    `;
+
+    card.addEventListener('click', () => switchMember(m.id));
+    grid.appendChild(card);
+  });
+}
+
+/* ============================================================
+   switchMember
+   ============================================================ */
+function switchMember(id) {
+  if (id === currentId) return;
+
+  const views = document.querySelectorAll('.tab-view.active');
+  views.forEach(v => {
+    v.style.transition = 'opacity 400ms var(--ease)';
+    v.style.opacity = '0';
+  });
+  setTimeout(() => {
+    currentId = id;
+    const m = getMember(id);
+
+    renderProfile(m);
+    renderMemberGrid();
+    renderGrowthActionGrid();
+    updateAmbientBg(m.status);
+
+    if (activeTab === 'tabGrowth') {
+      renderMasterySummary(m);
+      renderGrowth(m);
+      renderDimList(m);
+      renderGrowthActionGrid();
+    }
+
+    views.forEach(v => {
+      v.style.opacity = '1';
+    });
+
+    addGrowthLog('切换到 ' + m.name);
+  }, 400);
+}
+
+/* ============================================================
+   handleAction
+   ============================================================ */
+function handleAction(key) {
+  const m = getMember(currentId);
+  const snap = {
+    energy: m.energy,
+    focus: m.focus,
+    masteryTotal: m.mastery.total,
+    taskCounts: JSON.parse(JSON.stringify(m.taskCounts)),
+    memberId: currentId
+  };
+  let deltas = [], msg = '', detail = '', taskType = '', count = 0, decay = 1;
+
+  switch (key) {
+    case 'pr': {
+      const types = Object.keys(m.taskCounts);
+      taskType = types[Math.floor(Math.random() * types.length)];
+      count = (m.taskCounts[taskType] || 0) + 1;
+      decay = Math.pow(0.7, count - 1);
+      const gain = Math.round(5 * decay * 10) / 10;
+      m.energy = Math.max(0, m.energy - 10);
+      m.focus = Math.max(0, m.focus - 15);
+      m.mastery.total = Math.min(100, m.mastery.total + gain);
+      m.taskCounts[taskType] = count;
+      deltas = [
+        { v: '↓', l: '精力', c: 'neg' },
+        { v: '↓', l: '专注', c: 'neg' }
+      ];
+      msg = `完成了一个 PR`;
+      detail = '精力有所消耗';
+      break;
+    }
+    case 'deepwork':
+      m.focus = Math.max(0, m.focus - 20);
+      m.energy = Math.max(0, m.energy - 5);
+      deltas = [
+        { v: '↓', l: '专注', c: 'neg' },
+        { v: '↓', l: '精力', c: 'neg' }
+      ];
+      msg = '深度工作了一段时间';
+      detail = '专注度有所消耗';
+      break;
+    case 'rest':
+      m.energy = Math.min(100, m.energy + 15);
+      m.focus = Math.min(100, m.focus + 10);
+      deltas = [
+        { v: '↑', l: '精力', c: 'pos' },
+        { v: '↑', l: '专注', c: 'pos' }
+      ];
+      msg = '休息了一会儿';
+      detail = '精力和专注度恢复了一些';
+      break;
+    case 'review':
+      m.energy = Math.max(0, m.energy - 5);
+      m.focus = Math.max(0, m.focus - 8);
+      m.mastery.total = Math.min(100, m.mastery.total + 2);
+      deltas = [
+        { v: '↓', l: '精力', c: 'neg' },
+        { v: '↑', l: '成长', c: 'pos' }
+      ];
+      msg = 'Review 完成';
+      detail = '精力小幅消耗，有所成长';
+      break;
+    case 'meeting':
+      m.energy = Math.max(0, m.energy - 12);
+      m.focus = Math.max(0, m.focus - 5);
+      deltas = [
+        { v: '↓', l: '精力', c: 'neg' },
+        { v: '↓', l: '专注', c: 'neg' }
+      ];
+      msg = '开了一个长会';
+      detail = '精力消耗较多';
+      break;
+    case 'pioneer':
+      m.energy = Math.max(0, m.energy - 15);
+      m.focus = Math.max(0, m.focus - 20);
+      m.mastery.total = Math.min(100, m.mastery.total + 15);
+      deltas = [
+        { v: '↓', l: '精力', c: 'neg' },
+        { v: '↓', l: '专注', c: 'neg' },
+        { v: '↑', l: '成长', c: 'pos' }
+      ];
+      msg = '尝试了新的方向';
+      detail = '继续加油，探索新的领域';
+      break;
+  }
+
+  /* Update state text */
+  const newEnergy = Math.round(m.energy);
+  const newFocus = Math.round(m.focus);
+
+  const energyState2 = newEnergy > 75 ? '精力充沛' : newEnergy > 50 ? '状态不错' : newEnergy > 25 ? '该休息一下' : '好好歇歇吧';
+  const focusState2 = newFocus > 70 ? '适合深度工作' : newFocus > 40 ? '可以做浅层任务' : '注意力有些分散';
+  const elEnergy2 = $('statEnergy');
+  if (elEnergy2) elEnergy2.textContent = energyState2;
+  const elFocus2 = $('statFocus');
+  if (elFocus2) elFocus2.textContent = focusState2;
+  const weekActivity2 = Object.values(m.taskCounts).reduce((s, c) => s + c, 0);
+  const elMastery2 = $('statMastery');
+  if (elMastery2) {
+    if (weekActivity2 >= 30) elMastery2.textContent = '本周很充实';
+    else if (weekActivity2 >= 15) elMastery2.textContent = '稳步前进中';
+    else if (weekActivity2 >= 5) elMastery2.textContent = '正在蓄力';
+    else elMastery2.textContent = '刚开始热身';
+  }
+  const tabActivity2 = $('tabActivity');
+  if (tabActivity2) {
+    tabActivity2.textContent = weekActivity2 > 0 ? '·' : '';
+    tabActivity2.style.display = weekActivity2 > 0 ? 'flex' : 'none';
+  }
+  lastStatValues.energy = newEnergy;
+  lastStatValues.focus = newFocus;
+
+  /* Hidden bars for JS compat */
+  const barEnergy2 = $('barEnergy');
+  if (barEnergy2) barEnergy2.style.width = Math.max(0, Math.min(100, m.energy)) + '%';
+  const barFocus2 = $('barFocus');
+  if (barFocus2) barFocus2.style.width = Math.max(0, Math.min(100, m.focus)) + '%';
+  const barMastery2 = $('barMastery');
+  if (barMastery2) barMastery2.style.width = Math.max(0, Math.min(100, m.mastery.total)) + '%';
+
+  /* Update rings */
+  const ringE2 = $('ringEnergy');
+  const ringF2 = $('ringFocus');
+  const ringVE2 = $('ringEnergyVal');
+  const ringVF2 = $('ringFocusVal');
+  if (ringE2) ringE2.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - m.energy / 100);
+  if (ringF2) ringF2.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - m.focus / 100);
+  if (ringVE2) ringVE2.textContent = Math.round(m.energy);
+  if (ringVF2) ringVF2.textContent = Math.round(m.focus);
+
+  addGrowthStructuredLog(msg, detail, deltas);
+  showUndo(snap, msg);
+}
+
+/* ============================================================
+   showUndo / undoAction
+   ============================================================ */
+function showUndo(snap, msg) {
+  lastAction = snap;
+  $('undoMsg').textContent = msg;
+  $('undoToast').classList.add('show');
+  if (undoTimer) clearTimeout(undoTimer);
+  undoTimer = setTimeout(() => {
+    $('undoToast').classList.remove('show');
+    lastAction = null;
+  }, 5000);
+}
+
+function undoAction() {
+  if (!lastAction) return;
+  const m = getMember(lastAction.memberId);
+  m.energy = lastAction.energy;
+  m.focus = lastAction.focus;
+  m.mastery.total = lastAction.masteryTotal;
+  m.taskCounts = lastAction.taskCounts;
+
+  renderProfile(m);
+
+  addGrowthLog('已撤销');
+  $('undoToast').classList.remove('show');
+  lastAction = null;
+  if (undoTimer) clearTimeout(undoTimer);
+}
+
+/* ============================================================
+   renderActivityHeatmap
+   ============================================================ */
+function renderActivityHeatmap() {
+  const container = $('activityHeatmap');
+  if (!container) return;
+
+  const seed = [
+    0,1,2,3,2,1,0, 1,2,1,0,2,3,1, 2,3,4,3,2,1,0, 3,2,1,2,3,4,2,
+    2,1,0,1,2,1,0, 1,3,2,4,3,2,1, 0,0,1,2,1,0,0, 3,4,3,2,1,2,1,
+    2,3,2,1,0,1,2, 1,2,3,4,3,2,1, 0,1,0,1,2,3,2, 2,1,2,3,2,1,0,
+    3,2,1,0,0,1,0, 1,0,2,3,4,3,2, 2,3,2,1,0,1,0, 0,1,2,3,2,1,0,
+    1,2,3,4,2,1,0, 2,3,2,1,0,0,0, 3,4,3,2,1,2,3, 1,0,1,2,3,2,1,
+    2,1,0,0,1,2,3, 0,1,2,3,2,1,0, 1,2,3,4,3,2,1, 2,3,2,1,0,1,2
+  ];
+
+  const levelLabels = ['没有记录', '偶尔活动', '正常投入', '比较多', '很投入'];
+  const today = new Date();
+  const totalWeeks = 16;
+
+  const weeks = [];
+  for (let w = 0; w < totalWeeks; w++) {
+    const weekDays = [];
+    for (let d = 0; d < 7; d++) {
+      const dayOffset = (totalWeeks - 1 - w) * 7 + (6 - d);
+      const date = new Date(today);
+      date.setDate(today.getDate() - dayOffset);
+      const level = seed[w * 7 + d] || 0;
+      weekDays.push({
+        date,
+        level,
+        dateStr: `${date.getMonth() + 1}/${date.getDate()}`,
+        label: levelLabels[level]
+      });
+    }
+    weeks.push(weekDays);
+  }
+
+  let html = '<div style="display:flex; gap:3px; width:100%;">';
+  for (let w = 0; w < totalWeeks; w++) {
+    html += '<div style="display:flex; flex-direction:column; gap:4px; flex:1;">';
+    for (let d = 0; d < 7; d++) {
+      const day = weeks[w][d];
+      html += `<div class="heatmap-cell l${day.level}" data-level="${day.level}" data-date="${day.dateStr}" data-label="${day.label}"></div>`;
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+  container.innerHTML = html;
+
+  let tooltip = document.getElementById('heatmapTooltip');
+  if (!tooltip) {
+    tooltip = document.createElement('div');
+    tooltip.id = 'heatmapTooltip';
+    tooltip.className = 'heatmap-tooltip';
+    document.body.appendChild(tooltip);
+  }
+  container.addEventListener('mouseover', function(e) {
+    const cell = e.target.closest('.heatmap-cell');
+    if (!cell) return;
+    clearTimeout(container._ttTimer);
+    tooltip.textContent = `${cell.dataset.date} · ${cell.dataset.label}`;
+    tooltip.classList.add('visible');
+  });
+  container.addEventListener('mouseleave', function() {
+    clearTimeout(container._ttTimer);
+    container._ttTimer = setTimeout(() => tooltip.classList.remove('visible'), 100);
+  });
+  container.addEventListener('mousemove', function(e) {
+    if (tooltip.classList.contains('visible')) {
+      tooltip.style.left = (e.clientX + 10) + 'px';
+      tooltip.style.top = (e.clientY - 32) + 'px';
+    }
+  });
+}
+
+/* ============================================================
+   init
+   ============================================================ */
+function init() {
+  const m = getMember(currentId);
+
+  lastStatValues.energy = Math.round(m.energy);
+  lastStatValues.focus = Math.round(m.focus);
+
+  renderProfile(m);
+  renderActivityHeatmap();
+  renderGrowthActionGrid();
+  renderGrowthSyncButtons();
+
+  setTimeout(() => {
+    applyCardStagger(document.body);
+  }, 0);
+
+  addGrowthLog('初始化 · 数据源 GitHub (mock)');
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  $('undoBtn').addEventListener('click', undoAction);
+
+  /* Init rings */
+  function updateRings(energy, focus) {
+    const rE = $('ringEnergy');
+    const rF = $('ringFocus');
+    const vE = $('ringEnergyVal');
+    const vF = $('ringFocusVal');
+    if (rE) rE.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - energy / 100);
+    if (rF) rF.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - focus / 100);
+    if (vE) vE.textContent = Math.round(energy);
+    if (vF) vF.textContent = Math.round(focus);
+  }
+  updateRings(m.energy, m.focus);
+
+  /* Passive drain + updateStatDisplay */
+  function updateStatDisplay() {
+    const m2 = getMember(currentId);
+    const e = Math.round(m2.energy);
+    const f = Math.round(m2.focus);
+    const eState = e > 75 ? '精力充沛' : e > 50 ? '状态不错' : e > 25 ? '该休息一下' : '好好歇歇吧';
+    const fState = f > 70 ? '适合深度工作' : f > 40 ? '可以做浅层任务' : '注意力有些分散';
+    const elE = $('statEnergy');
+    if (elE) elE.textContent = eState;
+    const elF = $('statFocus');
+    if (elF) elF.textContent = fState;
+    const barE = $('barEnergy');
+    if (barE) barE.style.width = Math.max(0, Math.min(100, m2.energy)) + '%';
+    const barF = $('barFocus');
+    if (barF) barF.style.width = Math.max(0, Math.min(100, m2.focus)) + '%';
+    updateRings(m2.energy, m2.focus);
+  }
+
+  setInterval(() => {
+    const m = getMember(currentId);
+    if (m.status === 'focusing' && m.focus > 0) {
+      m.focus = Math.max(0, m.focus - 0.3);
+      m.energy = Math.max(0, m.energy - 0.05);
+      updateStatDisplay();
+    } else if (m.status === 'recharging') {
+      if (m.energy < 100) {
+        m.energy = Math.min(100, m.energy + 0.2);
+      }
+      if (m.focus < 100) {
+        m.focus = Math.min(100, m.focus + 0.4);
+      }
+      updateStatDisplay();
+    } else if (m.status === 'collaborating') {
+      m.energy = Math.max(0, m.energy - 0.1);
+      updateStatDisplay();
+    }
+  }, 3000);
+
+  /* Auto collab events */
+  setInterval(() => {
+    const m = getMember(currentId);
+    if (Math.random() < 0.15) {
+      m.collabScore += 1;
+      addGrowthLog('完成了一次协作');
+      const collabLevel2 = m.collabScore > 8 ? '活跃' : m.collabScore > 4 ? '稳定' : '偶尔';
+      const collabInline = $('collabInline');
+      if (collabInline) {
+        collabInline.innerHTML = `
+          <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+          协作 ${collabLevel2}
+        `;
+      }
+    }
+  }, 10000);
+
+  /* Init ambient bg */
+  updateAmbientBg(m.status);
+}
+
+/* ============================================================
+   renderEditCard / toggleNameEdit / openEditOverlay / closeEditOverlay
+   ============================================================*/
+function renderEditCard(m, highlight) {
+  const body = $('editOverlayBody');
+  if (!body) return;
+
+  const avatarHtml = m.avatarUrl
+    ? `<div class="edit-avatar-wrap" style="width:72px;height:72px;background:rgba(255,255,255,0.06);"><img src="${m.avatarUrl}" alt="${m.name}" onerror="this.style.display='none';this.parentElement.textContent='${m.initial}'"><div class="edit-avatar-overlay"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div></div>`
+    : `<div class="edit-avatar-wrap" style="width:72px;height:72px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:600;color:var(--text-secondary);">${m.initial}</div>`;
+
+  const roleHighlight = highlight === 'role' ? ' style="background:rgba(255,255,255,0.04);border-radius:12px;padding:12px;margin:-12px;"' : '';
+  const toolsHighlight = highlight === 'tools' ? ' style="background:rgba(255,255,255,0.04);border-radius:12px;padding:12px;margin:-12px;"' : '';
+
+  body.innerHTML = `
+    <div class="edit-section-block">
+      <div class="edit-section-title">头像 & 介绍</div>
+      <div class="edit-top-row">
+        ${avatarHtml}
+        <div class="edit-bio-area">
+          <textarea class="edit-bio-textarea" placeholder="写点什么介绍自己..." oninput="getMember(currentId).bio=this.value">${m.bio || ''}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="edit-section-block"${roleHighlight}>
+      <div class="edit-section-title">角色标签</div>
+      <div class="edit-tags-list" id="editRoleTags"></div>
+      <button class="edit-add-btn" onclick="showInlineInput('editRoleTags','roleTags')">+ 添加</button>
+    </div>
+
+    <div class="edit-section-block"${toolsHighlight}>
+      <div class="edit-section-title">工具 · 能力</div>
+      <div class="edit-tags-list" id="editToolsTags"></div>
+      <button class="edit-add-btn" onclick="showInlineInput('editToolsTags','tools')">+ 添加</button>
+    </div>
+  `;
+
+  renderEditableTags('editRoleTags', m.roleTags, 'roleTags');
+  renderEditableTags('editToolsTags', m.tools, 'tools');
+}
+
+function toggleNameEdit() {
+  const btn = $('nameEditBtn');
+  const heroName = $('heroName');
+  if (!btn || !heroName) return;
+
+  if (btn.classList.contains('active')) {
+    btn.classList.remove('active');
+    const input = heroName.querySelector('input');
+    if (input) {
+      const newName = input.value.trim();
+      const finalName = newName || getMember(currentId).name;
+      if (newName) {
+        const m = getMember(currentId);
+        m.name = newName;
+      }
+      heroName.classList.remove('hero-name-refresh');
+      heroName.textContent = finalName;
+      void heroName.offsetWidth;
+      heroName.classList.add('hero-name-refresh');
+      setTimeout(() => heroName.classList.remove('hero-name-refresh'), 360);
+    }
+  } else {
+    btn.classList.add('active');
+    const currentName = getMember(currentId).name;
+    heroName.innerHTML = `<input type="text" class="name-edit-input" value="${currentName}" style="font-size:34px;font-weight:700;color:var(--text-primary);background:transparent;border:none;border-bottom:2px solid var(--mood);outline:none;width:100%;letter-spacing:-0.02em;font-family:inherit;transition:border-color var(--mood-transition) var(--ease);" onkeydown="if(event.key==='Enter')toggleNameEdit()">`;
+    const input = heroName.querySelector('input');
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }
+}
+
+function openEditOverlay(section) {
+  const overlay = $('editOverlay');
+  if (!overlay) return;
+  renderEditCard(getMember(currentId), section);
+  overlay.classList.add('open');
+}
+
+function closeEditOverlay() {
+  const overlay = $('editOverlay');
+  if (!overlay) return;
+  overlay.classList.remove('open');
+  renderProfile(getMember(currentId));
+}
+
+function toggleLog() {
+  const wrap = $('logCollapsible');
+  if (!wrap) return;
+  wrap.classList.toggle('expanded');
+}
+
+/* ============================================================
+   renderEditableTags / showInlineInput
+   ============================================================*/
+function renderEditableTags(containerId, items, field) {
+  const container = $(containerId);
+  if (!container) return;
+  container.innerHTML = items.map((item, i) =>
+    `<span class="edit-tag">${item}<span class="tag-remove" data-field="${field}" data-index="${i}">&times;</span></span>`
+  ).join('');
+
+  container.querySelectorAll('.tag-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const f = btn.dataset.field;
+      const idx = parseInt(btn.dataset.index);
+      const m = getMember(currentId);
+      m[f].splice(idx, 1);
+      renderEditableTags(containerId, m[f], f);
+      renderEditCard(m);
+    });
+  });
+}
+
+function showInlineInput(containerId, field) {
+  const container = $(containerId);
+  if (container.querySelector('.edit-inline-input')) return;
+  const input = document.createElement('input');
+  input.className = 'edit-inline-input';
+  input.placeholder = '输入后回车';
+  container.appendChild(input);
+  input.focus();
+
+  function commit() {
+    const val = input.value.trim();
+    if (val) {
+      const m = getMember(currentId);
+      if (!m[field].includes(val)) {
+        m[field].push(val);
+      }
+    }
+    input.remove();
+    renderEditableTags(containerId, m[field], field);
+  }
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { input.remove(); }
+  });
+  input.addEventListener('blur', commit);
+}
+
+/* ============================================================
+   renderGrowthActionGrid
+   ============================================================*/
+function renderGrowthActionGrid() {
+  const grid = $('growthActionGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  actions.forEach(a => {
+    const btn = document.createElement('button');
+    btn.className = 'action-btn';
+    btn.title = a.desc;
+    btn.innerHTML = `<span class="action-icon">${a.icon}</span>${a.label}`;
+    btn.addEventListener('click', (e) => {
+      btn.classList.add('ripple');
+      setTimeout(() => btn.classList.remove('ripple'), 500);
+      handleAction(a.key);
+    });
+    grid.appendChild(btn);
+  });
+}
+
+/* ============================================================
+   addGrowthStructuredLog / addGrowthLog
+   ============================================================*/
+function addGrowthStructuredLog(msg, detail, deltas) {
+  const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  const box = $('growthLogEntries');
+  if (!box) return;
+  const row = document.createElement('div');
+  row.className = 'log-row';
+  const deltaHtml = deltas.map(d => `<span class="log-delta ${d.c}">${d.v}${d.l}</span>`).join('');
+  row.innerHTML = `
+    <div class="log-row-main">
+      <span class="log-time">${time}</span>
+      <span class="log-msg">${msg}</span>
+      <span class="log-delta">${deltaHtml}</span>
+    </div>
+    ${detail ? `<div class="log-row-detail">${detail}</div>` : ''}
+  `;
+  box.insertBefore(row, box.firstChild);
+  while (box.children.length > 15) box.removeChild(box.lastChild);
+}
+
+function addGrowthLog(msg, deltas) {
+  if (deltas && Array.isArray(deltas) && deltas.length > 0) {
+    addGrowthStructuredLog(msg, '', deltas);
+  } else {
+    const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    const box = $('growthLogEntries');
+    if (!box) return;
+    const row = document.createElement('div');
+    row.className = 'log-row';
+    row.innerHTML = `
+      <div class="log-row-main">
+        <span class="log-time">${time}</span>
+        <span class="log-msg">${msg}</span>
+      </div>
+    `;
+    box.insertBefore(row, box.firstChild);
+    while (box.children.length > 15) box.removeChild(box.lastChild);
+  }
+}
+
+/* ============================================================
+   renderGrowthSyncButtons / doGrowthSync / simulateGrowthSync / toggleGrowthAutoSync
+   ============================================================*/
+function renderGrowthSyncButtons() {
+  const syncBtn = $('growthSyncBtn');
+  const toggleBtn = $('growthSyncToggle');
+  if (!syncBtn || !toggleBtn) return;
+
+  syncBtn.addEventListener('click', () => {
+    if (syncBtn.style.pointerEvents !== 'none') doGrowthSync(false);
+  });
+  toggleBtn.addEventListener('click', toggleGrowthAutoSync);
+}
+
+let growthAutoSyncOn = false;
+let growthAutoSyncTimer = null;
+
+function doGrowthSync(isAuto) {
+  const btn = $('growthSyncBtn');
+  const label = $('growthSyncLabel');
+  const status = $('growthSyncStatus');
+  if (!btn || !label || !status) return;
+  btn.style.opacity = '0.5';
+  btn.style.pointerEvents = 'none';
+  label.textContent = '同步中...';
+  setTimeout(() => {
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+    label.textContent = isAuto ? '自动中' : '刷新';
+    status.textContent = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    simulateGrowthSync();
+  }, 600 + Math.random() * 400);
+}
+
+function simulateGrowthSync() {
+  const m = getMember(currentId);
+  const roll = Math.random();
+  if (roll < 0.4) {
+    const types = Object.keys(m.taskCounts);
+    const type = types[Math.floor(Math.random() * types.length)];
+    const n = (m.taskCounts[type] || 0) + 1;
+    const gain = Math.round(5 * Math.pow(0.7, n - 1) * 10) / 10;
+    m.mastery.total = Math.min(100, m.mastery.total + gain);
+    m.taskCounts[type] = n;
+    m.energy = Math.max(0, m.energy - 4);
+    const ne = Math.round(m.energy);
+    const eState = ne > 75 ? '精力充沛' : ne > 50 ? '状态不错' : ne > 25 ? '该休息一下' : '好好歇歇吧';
+    const elE = $('statEnergy');
+    if (elE) elE.textContent = eState;
+    const barE = $('barEnergy');
+    if (barE) barE.style.width = Math.max(0, Math.min(100, m.energy)) + '%';
+    /* Update ring */
+    const rE = $('ringEnergy');
+    const rV = $('ringEnergyVal');
+    if (rE) rE.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - m.energy / 100);
+    if (rV) rV.textContent = ne;
+
+    const wa = Object.values(m.taskCounts).reduce((s, c) => s + c, 0);
+    const elM = $('statMastery');
+    if (elM) {
+      if (wa >= 30) elM.textContent = '本周很充实';
+      else if (wa >= 15) elM.textContent = '稳步前进中';
+      else if (wa >= 5) elM.textContent = '正在蓄力';
+      else elM.textContent = '刚开始热身';
+    }
+    addGrowthStructuredLog(
+      `同步 · PR · ${type.split('-').pop()}`,
+      '有新的产出',
+      [{ v: '↑', l: '成长', c: 'pos' }]
+    );
+  }
+}
+
+function toggleGrowthAutoSync() {
+  const btn = $('growthSyncToggle');
+  const label = $('growthSyncLabel');
+  if (!btn || !label) return;
+  growthAutoSyncOn = !growthAutoSyncOn;
+  if (growthAutoSyncOn) {
+    btn.classList.add('on');
+    btn.textContent = '停止';
+    label.textContent = '自动中';
+    addGrowthLog('自动刷新已开启');
+    doGrowthSync(true);
+    growthAutoSyncTimer = setInterval(() => doGrowthSync(true), 15000);
+  } else {
+    btn.classList.remove('on');
+    btn.textContent = '自动';
+    label.textContent = '刷新';
+    if (growthAutoSyncTimer) { clearInterval(growthAutoSyncTimer); growthAutoSyncTimer = null; }
+    addGrowthLog('自动刷新已关闭');
+  }
+}
+
+/* ============================================================
+   updateAmbientBg
+   ============================================================ */
+function updateAmbientBg(status) {
+  const root = document.documentElement;
+  const palettes = {
+    focusing: {
+      mood: '#00C7BE',
+      glow: 'rgba(0,199,190,0.30)',
+      soft: 'rgba(0,199,190,0.12)',
+      deep: 'rgba(0,199,190,0.06)'
+    },
+    recharging: {
+      mood: '#FF6482',
+      glow: 'rgba(255,100,130,0.30)',
+      soft: 'rgba(255,100,130,0.12)',
+      deep: 'rgba(255,100,130,0.06)'
+    },
+    collaborating: {
+      mood: '#FF9F0A',
+      glow: 'rgba(255,159,10,0.30)',
+      soft: 'rgba(255,159,10,0.12)',
+      deep: 'rgba(255,159,10,0.06)'
+    }
+  };
+  const p = palettes[status];
+  if (p) {
+    root.style.setProperty('--mood', p.mood);
+    root.style.setProperty('--mood-glow', p.glow);
+    root.style.setProperty('--mood-soft', p.soft);
+    root.style.setProperty('--mood-deep', p.deep);
+  }
+  /* Switch ambient layers */
+  ['focusing', 'recharging', 'collaborating'].forEach(s => {
+    const el = document.getElementById('ambient' + s.charAt(0).toUpperCase() + s.slice(1));
+    if (el) el.style.opacity = s === status ? '1' : '0';
+  });
+  /* Update hero gradient */
+  updateHeroGradient(status);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+
+</script>
+</body>
+</html></arg_value>
